@@ -1,0 +1,8 @@
+server:
+  port: 6001
+
+logging:
+  level:
+    root: info
+  kafka:
+    topic: kip-provider-log-dev

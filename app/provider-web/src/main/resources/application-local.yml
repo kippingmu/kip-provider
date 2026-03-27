@@ -1,0 +1,22 @@
+spring:
+  cloud:
+    alibaba:
+      seata:
+        enabled: false
+    service-registry:
+      auto-registration:
+        enabled: false
+    nacos:
+      discovery:
+        enabled: false
+        register-enabled: false
+      config:
+        enabled: false
+    sentinel:
+      enabled: false
+
+logging:
+  level:
+    root: info
+  file:
+    path: logs-local
