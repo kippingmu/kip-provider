@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Central logging configuration for provider-web.
+  Key behavior:
+  1) local profile: colorful console + rolling files (offline friendly, no Kafka)
+  2) non-local profiles: console + rolling files + async Kafka shipping
+-->
+<Configuration status="warn" monitorInterval="30">
+    <!--
+      Properties are parameterized via Spring Environment, so runtime values
+      can be overridden from application-*.yml / env vars.
+    -->
+    <Properties>
+        <!-- Service identity -->
+        <Property name="APP_NAME">${spring:spring.application.name:-kip-provider}</Property>
+        <Property name="APP_ENV">${spring:spring.profiles.active:-dev}</Property>
+        <!-- Local file output root directory -->
+        <Property name="LOG_PATH">${spring:logging.file.path:-logs}</Property>
+        <!-- Root level can be tuned per profile -->
+        <Property name="ROOT_LEVEL">${spring:logging.level.root:-info}</Property>
+        <!-- Kafka broker and topic for centralized log pipeline -->
+        <Property name="KAFKA_BOOTSTRAP">${spring:logging.kafka.bootstrap-servers:-10.42.0.125:9092}</Property>
+        <Property name="KAFKA_TOPIC">${spring:logging.kafka.topic:-kip-provider-log}</Property>
+        <!-- Human-readable line format for local files -->
+        <Property name="LOG_PATTERN">%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} [%X{traceId:-},%X{spanId:-}] - %msg%n</Property>
+        <!-- Console patterns tuned for IDEA/terminal readability by environment -->
+        <Property name="LOCAL_CONSOLE_PATTERN">%style{%d{HH:mm:ss.SSS}}{bright,white} %highlight{%-5level}{FATAL=red bold, ERROR=red bold, WARN=yellow bold, INFO=green bold, DEBUG=cyan bold, TRACE=blue} %style{[LOCAL]}{green} %style{[${APP_NAME}]}{magenta} %style{[%thread]}{white} %style{%logger{24}}{cyan} %notEmpty{ %style{[traceId=%X{traceId:-}]}{yellow}}%notEmpty{ %style{[spanId=%X{spanId:-}]}{yellow}} %style{-}{white} %style{%msg}{bright,white}%n%throwable</Property>
+        <Property name="DEV_CONSOLE_PATTERN">%style{%d{HH:mm:ss.SSS}}{bright,white} %highlight{%-5level}{FATAL=red bold, ERROR=red bold, WARN=yellow bold, INFO=green, DEBUG=cyan bold, TRACE=blue} %style{[DEV]}{blue} %style{[${APP_NAME}]}{magenta} %style{[%thread]}{white} %style{%logger{28}}{cyan} %notEmpty{ %style{[traceId=%X{traceId:-}]}{yellow}}%notEmpty{ %style{[spanId=%X{spanId:-}]}{yellow}} %style{-}{white} %style{%msg}{bright,white}%n%throwable</Property>
+        <Property name="PROD_CONSOLE_PATTERN">%style{%d{yyyy-MM-dd HH:mm:ss.SSS}}{bright,white} %highlight{%-5level}{FATAL=red bold, ERROR=red bold, WARN=yellow bold, INFO=green, DEBUG=cyan, TRACE=blue} %style{[PROD]}{red} %style{[${APP_NAME}]}{magenta} %style{[%thread]}{white} %style{%logger{32}}{bright,white} %notEmpty{ %style{[traceId=%X{traceId:-}]}{yellow}}%notEmpty{ %style{[spanId=%X{spanId:-}]}{yellow}} %style{-}{white} %style{%msg}{bright,white}%n%throwable</Property>
+        <Property name="DEFAULT_CONSOLE_PATTERN">%style{%d{HH:mm:ss.SSS}}{bright,white} %highlight{%-5level}{FATAL=red bold, ERROR=red bold, WARN=yellow bold, INFO=green, DEBUG=cyan, TRACE=blue} %style{[${APP_ENV}]}{magenta} %style{[${APP_NAME}]}{magenta} %style{[%thread]}{white} %style{%logger{28}}{cyan} %notEmpty{ %style{[traceId=%X{traceId:-}]}{yellow}}%notEmpty{ %style{[spanId=%X{spanId:-}]}{yellow}} %style{-}{white} %style{%msg}{bright,white}%n%throwable</Property>
+        <!-- Dedicated business / SQL prefixes make controller/service vs mapper logs easier to spot -->
+        <Property name="BIZ_CONSOLE_PATTERN">%style{%d{HH:mm:ss.SSS}}{bright,white} %highlight{%-5level}{FATAL=red bold, ERROR=red bold, WARN=yellow bold, INFO=green, DEBUG=cyan bold, TRACE=blue} %style{[BIZ]}{magenta} %style{[${APP_ENV}]}{blue} %style{[%thread]}{white} %style{%logger{28}}{magenta} %notEmpty{ %style{[traceId=%X{traceId:-}]}{yellow}} %style{-}{white} %style{%msg}{bright,white}%n%throwable</Property>
+        <Property name="SQL_CONSOLE_PATTERN">%style{%d{HH:mm:ss.SSS}}{bright,white} %highlight{%-5level}{FATAL=red bold, ERROR=red bold, WARN=yellow bold, INFO=green, DEBUG=cyan bold, TRACE=blue} %style{[SQL]}{yellow} %style{[${APP_ENV}]}{blue} %style{[%thread]}{white} %style{%logger{24}}{yellow} %notEmpty{ %style{[traceId=%X{traceId:-}]}{yellow}} %style{-}{white} %style{%msg}{bright,white}%n%throwable</Property>
+        <!-- JSON one-line format for Kafka, easy for downstream parsing/indexing -->
+        <Property name="JSON_LINE">{\"ts\":\"%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX}\",\"level\":\"%p\",\"thread\":\"%t\",\"logger\":\"%c\",\"message\":\"%enc{%m}{JSON}\",\"traceId\":\"%X{traceId}\",\"spanId\":\"%X{spanId}\",\"app\":\"${APP_NAME}\",\"env\":\"${APP_ENV}\"}%n</Property>
+    </Properties>
+
+    <Appenders>
+        <!-- Environment-specific console output -->
+        <Console name="ConsoleLocal" target="SYSTEM_OUT">
+            <PatternLayout pattern="${LOCAL_CONSOLE_PATTERN}" disableAnsi="false" noConsoleNoAnsi="false"/>
+        </Console>
+        <Console name="ConsoleDev" target="SYSTEM_OUT">
+            <PatternLayout pattern="${DEV_CONSOLE_PATTERN}" disableAnsi="false" noConsoleNoAnsi="false"/>
+        </Console>
+        <Console name="ConsoleProd" target="SYSTEM_OUT">
+            <PatternLayout pattern="${PROD_CONSOLE_PATTERN}" disableAnsi="false" noConsoleNoAnsi="false"/>
+        </Console>
+        <Console name="ConsoleDefault" target="SYSTEM_OUT">
+            <PatternLayout pattern="${DEFAULT_CONSOLE_PATTERN}" disableAnsi="false" noConsoleNoAnsi="false"/>
+        </Console>
+        <Console name="BusinessConsole" target="SYSTEM_OUT">
+            <PatternLayout pattern="${BIZ_CONSOLE_PATTERN}" disableAnsi="false" noConsoleNoAnsi="false"/>
+        </Console>
+        <Console name="SqlConsole" target="SYSTEM_OUT">
+            <PatternLayout pattern="${SQL_CONSOLE_PATTERN}" disableAnsi="false" noConsoleNoAnsi="false"/>
+        </Console>
+
+        <!-- Main rolling file containing all levels (subject to root/logger level) -->
+        <RollingFile name="AppFile"
+                     fileName="${LOG_PATH}/app.log"
+                     filePattern="${LOG_PATH}/archive/app.%d{yyyy-MM-dd}.%i.log.gz">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <Policies>
+                <!-- Rotate daily and also rotate when a file reaches 100 MB -->
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="100 MB"/>
+            </Policies>
+            <!-- Keep up to 30 rollover files -->
+            <DefaultRolloverStrategy max="30"/>
+        </RollingFile>
+
+        <!-- Dedicated error rolling file for fast incident triage -->
+        <RollingFile name="ErrorFile"
+                     fileName="${LOG_PATH}/error.log"
+                     filePattern="${LOG_PATH}/archive/error.%d{yyyy-MM-dd}.%i.log.gz">
+            <!-- Only ERROR and above -->
+            <ThresholdFilter level="error" onMatch="ACCEPT" onMismatch="DENY"/>
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="100 MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="30"/>
+        </RollingFile>
+
+        <!-- Kafka appender for centralized log collection -->
+        <Kafka name="KafkaLog" topic="${KAFKA_TOPIC}" ignoreExceptions="true" syncSend="false">
+            <Property name="bootstrap.servers">${KAFKA_BOOTSTRAP}</Property>
+            <!-- Trade-off: higher throughput with moderate durability -->
+            <Property name="acks">1</Property>
+            <Property name="compression.type">lz4</Property>
+            <Property name="batch.size">32768</Property>
+            <Property name="linger.ms">100</Property>
+            <!-- Prevent log call from blocking too long on broker pressure -->
+            <Property name="max.block.ms">2000</Property>
+            <PatternLayout pattern="${JSON_LINE}"/>
+        </Kafka>
+
+        <!-- Async wrapper to decouple business threads from Kafka IO -->
+        <Async name="AsyncKafka" bufferSize="8192" blocking="false">
+            <AppenderRef ref="KafkaLog"/>
+        </Async>
+    </Appenders>
+
+    <Loggers>
+        <!-- Reduce framework noise by default; override via logging.level.* when needed -->
+        <Logger name="org.springframework" level="${spring:logging.level.org.springframework:-warn}"/>
+        <Logger name="org.apache.ibatis" level="${spring:logging.level.org.apache.ibatis:-warn}"/>
+        <Logger name="org.mybatis" level="${spring:logging.level.org.mybatis:-warn}"/>
+        <Logger name="com.alibaba.nacos" level="${spring:logging.level.com.alibaba.nacos:-warn}"/>
+        <Logger name="com.alibaba.cloud.nacos" level="${spring:logging.level.com.alibaba.cloud.nacos:-warn}"/>
+
+        <!--
+          Offline profile:
+          - colorful console for IDEA/local debugging
+          - no Kafka
+          - files + console (app.log + error.log)
+        -->
+        <SpringProfile name="local">
+            <Logger name="xyz.kip.provider.dal.mapper" level="${spring:logging.level.xyz.kip.provider.dal.mapper:-debug}" additivity="false">
+                <AppenderRef ref="SqlConsole"/>
+                <AppenderRef ref="AppFile"/>
+                <AppenderRef ref="ErrorFile"/>
+            </Logger>
+            <Logger name="xyz.kip" level="${spring:logging.level.xyz.kip:-info}" additivity="false">
+                <AppenderRef ref="BusinessConsole"/>
+                <AppenderRef ref="AppFile"/>
+                <AppenderRef ref="ErrorFile"/>
+            </Logger>
+            <Root level="${ROOT_LEVEL}">
+                <AppenderRef ref="ConsoleLocal"/>
+                <AppenderRef ref="AppFile"/>
+                <AppenderRef ref="ErrorFile"/>
+            </Root>
+        </SpringProfile>
+
+        <SpringProfile name="dev &amp; !local">
+            <Logger name="xyz.kip.provider.dal.mapper" level="${spring:logging.level.xyz.kip.provider.dal.mapper:-debug}" additivity="false">
+                <AppenderRef ref="SqlConsole"/>
+                <AppenderRef ref="AppFile"/>
+                <AppenderRef ref="ErrorFile"/>
+                <AppenderRef ref="AsyncKafka"/>
+            </Logger>
+            <Logger name="xyz.kip" level="${spring:logging.level.xyz.kip:-info}" additivity="false">
+                <AppenderRef ref="BusinessConsole"/>
+                <AppenderRef ref="AppFile"/>
+                <AppenderRef ref="ErrorFile"/>
+                <AppenderRef ref="AsyncKafka"/>
+            </Logger>
+            <Root level="${ROOT_LEVEL}">
+                <AppenderRef ref="ConsoleDev"/>
+                <AppenderRef ref="AppFile"/>
+                <AppenderRef ref="ErrorFile"/>
+                <AppenderRef ref="AsyncKafka"/>
+            </Root>
+        </SpringProfile>
+
+        <SpringProfile name="prod &amp; !local">
+            <Logger name="xyz.kip.provider.dal.mapper" level="${spring:logging.level.xyz.kip.provider.dal.mapper:-info}" additivity="false">
+                <AppenderRef ref="SqlConsole"/>
+                <AppenderRef ref="AppFile"/>
+                <AppenderRef ref="ErrorFile"/>
+                <AppenderRef ref="AsyncKafka"/>
+            </Logger>
+            <Logger name="xyz.kip" level="${spring:logging.level.xyz.kip:-info}" additivity="false">
+                <AppenderRef ref="BusinessConsole"/>
+                <AppenderRef ref="AppFile"/>
+                <AppenderRef ref="ErrorFile"/>
+                <AppenderRef ref="AsyncKafka"/>
+            </Logger>
+            <Root level="${ROOT_LEVEL}">
+                <AppenderRef ref="ConsoleProd"/>
+                <AppenderRef ref="AppFile"/>
+                <AppenderRef ref="ErrorFile"/>
+                <AppenderRef ref="AsyncKafka"/>
+            </Root>
+        </SpringProfile>
+
+        <!--
+          Default online behavior (other online profiles except local/dev/prod):
+          - console for runtime visibility
+          - rolling files for local retention
+          - async Kafka for centralized analysis
+        -->
+        <SpringProfile name="!local &amp; !dev &amp; !prod">
+            <Logger name="xyz.kip.provider.dal.mapper" level="${spring:logging.level.xyz.kip.provider.dal.mapper:-debug}" additivity="false">
+                <AppenderRef ref="SqlConsole"/>
+                <AppenderRef ref="AppFile"/>
+                <AppenderRef ref="ErrorFile"/>
+                <AppenderRef ref="AsyncKafka"/>
+            </Logger>
+            <Logger name="xyz.kip" level="${spring:logging.level.xyz.kip:-info}" additivity="false">
+                <AppenderRef ref="BusinessConsole"/>
+                <AppenderRef ref="AppFile"/>
+                <AppenderRef ref="ErrorFile"/>
+                <AppenderRef ref="AsyncKafka"/>
+            </Logger>
+            <Root level="${ROOT_LEVEL}">
+                <AppenderRef ref="ConsoleDefault"/>
+                <AppenderRef ref="AppFile"/>
+                <AppenderRef ref="ErrorFile"/>
+                <AppenderRef ref="AsyncKafka"/>
+            </Root>
+        </SpringProfile>
+    </Loggers>
+</Configuration>
