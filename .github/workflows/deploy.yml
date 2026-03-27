@@ -21,6 +21,8 @@ jobs:
     permissions:
       contents: read
     env:
+      ACR_REGISTRY: registry.cn-hangzhou.aliyuncs.com
+      IMAGE_REPO: registry.cn-hangzhou.aliyuncs.com/kip-app/kip-provider
       DOCKER_BUILDKIT: "1"
       BUILDKIT_PROGRESS: plain
 
@@ -41,17 +43,14 @@ jobs:
             IMAGE_TAG="${GITHUB_SHA::12}"
           fi
 
-          IMAGE_REPO="${{ vars.ALIYUN_REGISTRY }}/${{ vars.ALIYUN_NAMESPACE }}/${{ vars.APP_NAME }}"
-
           echo "IMAGE_TAG=${IMAGE_TAG}" >> "$GITHUB_ENV"
-          echo "IMAGE_REPO=${IMAGE_REPO}" >> "$GITHUB_ENV"
           echo "FULL_IMAGE=${IMAGE_REPO}:${IMAGE_TAG}" >> "$GITHUB_ENV"
 
       - name: Docker login to ACR
         shell: bash
         run: |
           set -euo pipefail
-          echo "${{ secrets.ALIYUN_REGISTRY_PASSWORD }}" | docker login "${{ vars.ALIYUN_REGISTRY }}" -u "${{ secrets.ALIYUN_REGISTRY_USERNAME }}" --password-stdin
+          echo "${{ secrets.ALIYUN_REGISTRY_PASSWORD }}" | docker login "${ACR_REGISTRY}" -u "${{ secrets.ALIYUN_REGISTRY_USERNAME }}" --password-stdin
 
       - name: Prepare kip-open-common for docker build
         shell: bash
@@ -145,4 +144,4 @@ jobs:
       - name: Docker logout
         if: always()
         shell: bash
-        run: docker logout "${{ vars.ALIYUN_REGISTRY }}" || true
+        run: docker logout "${ACR_REGISTRY}" || true
