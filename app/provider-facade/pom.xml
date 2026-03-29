@@ -18,4 +18,15 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
+    <dependencies>
+        <dependency>
+            <groupId>xyz.kip</groupId>
+            <artifactId>provider-shard</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>xyz.kip</groupId>
+            <artifactId>provider-service-impl</artifactId>
+        </dependency>
+    </dependencies>
+
 </project>

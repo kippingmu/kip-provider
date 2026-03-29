@@ -19,6 +19,10 @@
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+        </dependency>
         <!-- Messaging: RocketMQ (managed by Spring Cloud Alibaba BOM) -->
         <dependency>
             <groupId>org.apache.rocketmq</groupId>

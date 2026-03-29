@@ -7,10 +7,10 @@
         <groupId>xyz.kip</groupId>
         <artifactId>kip-provider</artifactId>
         <version>1.0-SNAPSHOT</version>
-        <relativePath>../../../pom.xml</relativePath>
+        <relativePath>../../pom.xml</relativePath>
     </parent>
 
-    <artifactId>provider-service-impl</artifactId>
+    <artifactId>provider-shard</artifactId>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
@@ -21,21 +21,15 @@
     <dependencies>
         <dependency>
             <groupId>org.springframework</groupId>
-            <artifactId>spring-context</artifactId>
+            <artifactId>spring-web</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.alibaba.cloud</groupId>
-            <artifactId>spring-cloud-starter-alibaba-seata</artifactId>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.springframework.boot</groupId>
-                    <artifactId>spring-boot-starter-logging</artifactId>
-                </exclusion>
-            </exclusions>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-openfeign-core</artifactId>
         </dependency>
         <dependency>
             <groupId>xyz.kip</groupId>
-            <artifactId>provider-manager</artifactId>
+            <artifactId>kip-open-common</artifactId>
         </dependency>
     </dependencies>
 

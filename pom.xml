@@ -20,6 +20,7 @@
     <modules>
         <module>app/provider-web</module>
         <module>app/provider-facade</module>
+        <module>app/provider-shard</module>
         <module>app/biz/provider-service-impl</module>
         <module>app/common/provider-manager</module>
         <module>app/common/provider-dal</module>
@@ -105,6 +106,11 @@
             </dependency>
 
             <!-- local -->
+            <dependency>
+                <groupId>xyz.kip</groupId>
+                <artifactId>provider-shard</artifactId>
+                <version>1.0-SNAPSHOT</version>
+            </dependency>
             <dependency>
                 <groupId>xyz.kip</groupId>
                 <artifactId>provider-facade</artifactId>

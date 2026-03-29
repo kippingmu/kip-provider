@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kip-provider
+  labels:
+    app: kip-provider
+spec:
+  type: ClusterIP
+  selector:
+    app: kip-provider
+  ports:
+    - name: http
+      port: 6001
+      targetPort: 6001
