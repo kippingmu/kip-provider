@@ -1,5 +1,6 @@
 package xyz.kip.provider.service.demo.impl;
 
+import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import xyz.kip.open.common.base.Result;
@@ -11,15 +12,13 @@ import xyz.kip.provider.service.demo.domain.ProviderDemoEchoDomain;
 
 /**
  * Internal application service for provider demo capabilities.
+ * @author xiaoshichuan
  */
 @Service
 public class ProviderDemoServiceImpl implements ProviderDemoService {
 
-    private final ProviderDemoManager providerDemoManager;
-
-    public ProviderDemoServiceImpl(ProviderDemoManager providerDemoManager) {
-        this.providerDemoManager = providerDemoManager;
-    }
+    @Resource
+    ProviderDemoManager providerDemoManager;
 
     @Override
     public Result<ProviderDemoEchoDomain> echo(ProviderDemoEchoCommand command) {

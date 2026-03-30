@@ -1,5 +1,6 @@
 package xyz.kip.provider.facade.impl;
 
+import jakarta.annotation.Resource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.RestController;
@@ -20,11 +21,8 @@ public class OpenFeignFacadeImpl implements ProviderOpenFeignShard {
 
     private static final Logger log = LoggerFactory.getLogger(OpenFeignFacadeImpl.class);
 
-    private final ProviderDemoService providerDemoService;
-
-    public OpenFeignFacadeImpl(ProviderDemoService providerDemoService) {
-        this.providerDemoService = providerDemoService;
-    }
+    @Resource
+   ProviderDemoService providerDemoService;
 
     @Override
     public Result<ProviderDemoEchoRespDTO> echo(ProviderDemoEchoReqDTO req) {

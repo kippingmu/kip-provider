@@ -8,6 +8,7 @@ import xyz.kip.provider.manager.demo.model.ProviderDemoEchoModel;
 
 /**
  * Internal manager implementation for provider demo capabilities.
+ * @author xiaoshichuan
  */
 @Component
 public class ProviderDemoManagerImpl implements ProviderDemoManager {
