@@ -5,6 +5,7 @@ WORKDIR /build
 
 COPY pom.xml ./
 COPY app/provider-facade/pom.xml app/provider-facade/pom.xml
+COPY app/provider-shard/pom.xml app/provider-shard/pom.xml
 COPY app/common/provider-dal/pom.xml app/common/provider-dal/pom.xml
 COPY app/common/provider-manager/pom.xml app/common/provider-manager/pom.xml
 COPY app/biz/provider-service-impl/pom.xml app/biz/provider-service-impl/pom.xml
