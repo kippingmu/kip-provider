@@ -23,6 +23,14 @@ jobs:
     env:
       ACR_REGISTRY: registry.cn-hangzhou.aliyuncs.com
       IMAGE_REPO: registry.cn-hangzhou.aliyuncs.com/kip-app/kip-provider
+      KIP_SHARED_ROOT: /home/xiaoshichuan/kip-shared/kip
+      KIP_NAMESPACE: kip-poc
+      KIP_NACOS_ADDR: 10.42.0.125:8848
+      KIP_NACOS_ADMIN_ADDR: 10.42.0.125:8080
+      KIP_NACOS_USER: nacos
+      KIP_NACOS_PASS: nacos8848
+      KIP_NACOS_NAMESPACE: 74a3fe73-35c1-474e-ade8-9bc460b3f398
+      KIP_NACOS_GROUP: K8S_POC
       DOCKER_BUILDKIT: "1"
       BUILDKIT_PROGRESS: plain
 
@@ -31,6 +39,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           persist-credentials: false
+
+      - name: Baseline check
+        shell: bash
+        run: |
+          set -euo pipefail
+          "${KIP_SHARED_ROOT}/scripts/shared/check-kip-baseline.sh"
 
       - name: Resolve image variables
         shell: bash
@@ -69,77 +83,83 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          docker build --progress=plain -t "${IMAGE_REPO}:${IMAGE_TAG}" -t "${IMAGE_REPO}:latest" .
+          docker build --progress=plain -t "${FULL_IMAGE}" .
 
       - name: Push image
         shell: bash
         run: |
           set -euo pipefail
-          docker push "${IMAGE_REPO}:${IMAGE_TAG}"
-          docker push "${IMAGE_REPO}:latest"
+          docker push "${FULL_IMAGE}"
 
-      - name: Deploy with docker compose
+      - name: Capture previous deployment image
         shell: bash
         run: |
           set -euo pipefail
-          DEPLOY_PATH="${{ vars.DEPLOY_PATH }}"
-          STATE_DIR="${DEPLOY_PATH}/.deploy-state"
-          CURRENT_FILE="${STATE_DIR}/current_image_tag"
+          CURRENT_IMAGE=""
+          if kubectl -n "${KIP_NAMESPACE}" get deployment kip-provider >/dev/null 2>&1; then
+            CURRENT_IMAGE="$(kubectl -n "${KIP_NAMESPACE}" get deployment kip-provider -o jsonpath='{.spec.template.spec.containers[0].image}')"
+          fi
+          echo "PREV_IMAGE=${CURRENT_IMAGE}" >> "$GITHUB_ENV"
 
-          test -d "${DEPLOY_PATH}"
-          test -f "${DEPLOY_PATH}/docker-compose.yml"
-
-          mkdir -p "${STATE_DIR}"
-          PREV_TAG=""
-          if [ -f "${CURRENT_FILE}" ]; then
-            PREV_TAG="$(cat "${CURRENT_FILE}")"
+      - name: Sync Nacos config
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! "${KIP_SHARED_ROOT}/scripts/shared/publish-nacos-config.sh" verify kip-provider deploy/k8s/nacos/kip-provider-k8s.yml; then
+            "${KIP_SHARED_ROOT}/scripts/shared/publish-nacos-config.sh" put kip-provider deploy/k8s/nacos/kip-provider-k8s.yml
+            "${KIP_SHARED_ROOT}/scripts/shared/publish-nacos-config.sh" verify kip-provider deploy/k8s/nacos/kip-provider-k8s.yml
           fi
 
-          echo "PREV_TAG=${PREV_TAG}" >> "$GITHUB_ENV"
+      - name: Render K8s runtime manifests
+        shell: bash
+        env:
+          MYSQL_URL: ${{ secrets.MYSQL_URL }}
+          MYSQL_USERNAME: ${{ secrets.MYSQL_USERNAME }}
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+        run: |
+          set -euo pipefail
+          RENDERED_DIR="$(mktemp -d)"
+          scripts/k8s/render-manifests.sh deploy/k8s "${RENDERED_DIR}" "${IMAGE_TAG}"
+          echo "RENDERED_DIR=${RENDERED_DIR}" >> "$GITHUB_ENV"
 
-          cd "${DEPLOY_PATH}"
-          export IMAGE_TAG
-          docker compose pull
-          docker compose up -d
-
-      - name: Health check
+      - name: Apply K8s config
         shell: bash
         run: |
           set -euo pipefail
-          HEALTH_URL="${{ vars.HEALTHCHECK_URL }}"
+          kubectl get namespace "${KIP_NAMESPACE}" >/dev/null 2>&1 || kubectl create namespace "${KIP_NAMESPACE}"
 
-          for i in $(seq 1 20); do
-            if curl -fsS "${HEALTH_URL}" >/dev/null; then
-              echo "Health check passed"
-              exit 0
+          if [ ! -f "${RENDERED_DIR}/secret.yaml" ]; then
+            kubectl -n "${KIP_NAMESPACE}" get secret kip-provider-secret >/dev/null
+          fi
+
+          for manifest in configmap.yaml secret.yaml service.yaml deployment.yaml; do
+            if [ -f "${RENDERED_DIR}/${manifest}" ]; then
+              kubectl -n "${KIP_NAMESPACE}" apply -f "${RENDERED_DIR}/${manifest}"
             fi
-            sleep 5
           done
 
-          echo "Health check failed"
-          exit 1
-
-      - name: Persist deployed tag
-        if: success()
+      - name: Roll out provider
         shell: bash
         run: |
           set -euo pipefail
-          DEPLOY_PATH="${{ vars.DEPLOY_PATH }}"
-          mkdir -p "${DEPLOY_PATH}/.deploy-state"
-          printf "%s" "${IMAGE_TAG}" > "${DEPLOY_PATH}/.deploy-state/current_image_tag"
+          kubectl -n "${KIP_NAMESPACE}" set image deployment/kip-provider kip-provider="${FULL_IMAGE}"
+          kubectl -n "${KIP_NAMESPACE}" rollout status deployment/kip-provider --timeout=5m
 
-      - name: Rollback on failure
-        if: failure() && env.PREV_TAG != ''
+      - name: Provider smoke verification
         shell: bash
         run: |
           set -euo pipefail
-          DEPLOY_PATH="${{ vars.DEPLOY_PATH }}"
-          PREV_TAG="${PREV_TAG}"
+          scripts/k8s/smoke-provider.sh
 
-          cd "${DEPLOY_PATH}"
-          export IMAGE_TAG="${PREV_TAG}"
-          docker compose pull
-          docker compose up -d
+      - name: Roll back on failure
+        if: failure() && env.PREV_IMAGE != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Rolling back kip-provider to ${PREV_IMAGE}"
+          kubectl -n "${KIP_NAMESPACE}" set image deployment/kip-provider kip-provider="${PREV_IMAGE}"
+          kubectl -n "${KIP_NAMESPACE}" rollout status deployment/kip-provider --timeout=5m
+          scripts/k8s/smoke-provider.sh
 
       - name: Docker logout
         if: always()
