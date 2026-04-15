@@ -5,30 +5,35 @@ spring:
   application:
     name: kip-provider
   profiles:
-    active: dev
+    active: ${SPRING_PROFILES_ACTIVE:dev}
   config:
     import:
-      - optional:nacos:${spring.application.name}-${spring.profiles.active}.yml?group=DEFAULT_GROUP&refreshEnabled=true
+      - optional:nacos:${spring.application.name}-${spring.profiles.active}.yml?group=${NACOS_GROUP:K8S_POC}&refreshEnabled=true
   cloud:
+    service-registry:
+      auto-registration:
+        enabled: ${NACOS_AUTO_REGISTRATION_ENABLED:false}
     alibaba:
       seata:
         tx-service-group: default_tx_group
     nacos:
       config:
-        server-addr: 10.42.0.125:8848
-        namespace: public
-        group: DEFAULT_GROUP
+        enabled: ${NACOS_CONFIG_ENABLED:true}
+        server-addr: ${NACOS_SERVER_ADDR:10.42.0.125:8848}
+        namespace: ${NACOS_NAMESPACE:74a3fe73-35c1-474e-ade8-9bc460b3f398}
+        group: ${NACOS_GROUP:K8S_POC}
         file-extension: yaml
       discovery:
-        server-addr: 10.42.0.125:8848
-        namespace: public
-        group: DEFAULT_GROUP
-        register-enabled: true
+        enabled: ${NACOS_DISCOVERY_ENABLED:false}
+        server-addr: ${NACOS_SERVER_ADDR:10.42.0.125:8848}
+        namespace: ${NACOS_NAMESPACE:74a3fe73-35c1-474e-ade8-9bc460b3f398}
+        group: ${NACOS_GROUP:K8S_POC}
+        register-enabled: ${NACOS_REGISTER_ENABLED:false}
         ip-delete-timeout: 30000
     sentinel:
       transport:
-        dashboard: 10.42.0.125:8090
-        port: 8090
+        dashboard: ${SENTINEL_DASHBOARD:10.42.0.125:8090}
+        port: ${SENTINEL_PORT:8090}
       web-context-unify: true
   jackson:
     serialization:
@@ -37,7 +42,7 @@ spring:
   lifecycle:
     timeout-per-shutdown-phase: 30s
   kafka:
-    bootstrap-servers: 10.42.0.125:9092
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:10.42.0.125:9092}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
@@ -50,22 +55,22 @@ spring:
         max.request.size: 1048576
 
 rocketmq:
-  name-server: 10.42.0.125:9876
+  name-server: ${ROCKETMQ_NAME_SERVER:10.42.0.125:9876}
 
 seata:
   config:
     type: nacos
     nacos:
-      server-addr: 10.42.0.125:8848
-      group: SEATA_GROUP
-      data-id: seataServer.properties
+      server-addr: ${SEATA_NACOS_SERVER_ADDR:${NACOS_SERVER_ADDR:10.42.0.125:8848}}
+      group: ${SEATA_GROUP:SEATA_GROUP}
+      data-id: ${SEATA_CONFIG_DATA_ID:seataServer.properties}
   registry:
     type: nacos
     nacos:
-      application: seata-server
-      server-addr: 10.42.0.125:8848
-      group: SEATA_GROUP
-      cluster: default
+      application: ${SEATA_APPLICATION:seata-server}
+      server-addr: ${SEATA_NACOS_SERVER_ADDR:${NACOS_SERVER_ADDR:10.42.0.125:8848}}
+      group: ${SEATA_GROUP:SEATA_GROUP}
+      cluster: ${SEATA_CLUSTER:default}
 
 mybatis:
   mapper-locations: classpath:mapper/*.xml
@@ -84,8 +89,8 @@ logging:
     org.apache.ibatis: warn
     org.mybatis: warn
   kafka:
-    bootstrap-servers: 10.42.0.125:9092
-    topic: kip-provider-log
+    bootstrap-servers: ${LOGGING_KAFKA_BOOTSTRAP_SERVERS:${KAFKA_BOOTSTRAP_SERVERS:10.42.0.125:9092}}
+    topic: ${LOGGING_KAFKA_TOPIC:kip-provider-log}
 
 management:
   endpoints:

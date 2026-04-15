@@ -1,0 +1,30 @@
+server:
+  port: 6001
+
+spring:
+  cloud:
+    service-registry:
+      auto-registration:
+        enabled: false
+    nacos:
+      discovery:
+        enabled: false
+        register-enabled: false
+    sentinel:
+      enabled: false
+    alibaba:
+      seata:
+        enabled: false
+  datasource:
+    url: ${MYSQL_URL}
+    username: ${MYSQL_USERNAME}
+    password: ${MYSQL_PASSWORD}
+
+logging:
+  level:
+    root: info
+  file:
+    path: /tmp/kip-provider/logs
+  kafka:
+    topic: ${LOGGING_KAFKA_TOPIC:kip-provider-log-k8s}
+

@@ -16,8 +16,8 @@ spec:
     spec:
       containers:
         - name: kip-provider
-          image: registry.cn-hangzhou.aliyuncs.com/kip-app/kip-provider:latest
-          imagePullPolicy: IfNotPresent
+          image: registry.cn-hangzhou.aliyuncs.com/kip-app/kip-provider:k8s-poc-local
+          imagePullPolicy: Never
           ports:
             - name: http
               containerPort: 6001
@@ -59,4 +59,6 @@ spec:
             preStop:
               exec:
                 command: ["/bin/sh", "-c", "sleep 15"]
+      nodeSelector:
+        kubernetes.io/hostname: ubuntu
       terminationGracePeriodSeconds: 60
