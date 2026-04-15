@@ -25,6 +25,7 @@ jobs:
       IMAGE_REPO: registry.cn-hangzhou.aliyuncs.com/kip-app/kip-provider
       KIP_SHARED_ROOT: /home/xiaoshichuan/kip-shared/kip
       KIP_NAMESPACE: kip-poc
+      KIP_IMAGE_PULL_SECRET: kip-acr-pull
       KIP_NACOS_ADDR: 10.42.0.125:8848
       KIP_NACOS_ADMIN_ADDR: 10.42.0.125:8080
       KIP_NACOS_USER: nacos
@@ -65,6 +66,17 @@ jobs:
         run: |
           set -euo pipefail
           echo "${{ secrets.ALIYUN_REGISTRY_PASSWORD }}" | docker login "${ACR_REGISTRY}" -u "${{ secrets.ALIYUN_REGISTRY_USERNAME }}" --password-stdin
+
+      - name: Ensure K8s image pull secret
+        shell: bash
+        run: |
+          set -euo pipefail
+          kubectl get namespace "${KIP_NAMESPACE}" >/dev/null 2>&1 || kubectl create namespace "${KIP_NAMESPACE}"
+          kubectl -n "${KIP_NAMESPACE}" create secret docker-registry "${KIP_IMAGE_PULL_SECRET}" \
+            --docker-server="${ACR_REGISTRY}" \
+            --docker-username="${{ secrets.ALIYUN_REGISTRY_USERNAME }}" \
+            --docker-password="${{ secrets.ALIYUN_REGISTRY_PASSWORD }}" \
+            --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Prepare kip-open-common for docker build
         shell: bash
